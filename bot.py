@@ -18,6 +18,9 @@ TZ = timezone(timedelta(hours=5))  # Алматы
 # Например 9..23 -> первый отчёт "08:00-09:00", последний "22:00-23:00".
 FIRST_REPORT_HOUR, LAST_REPORT_HOUR = 9, 23
 
+# Пороги для цвета нормативов (поменяй под свои нормы)
+STD_GREEN, STD_YELLOW = 90, 80
+
 
 def mmss(sec):
     m, s = divmod(int(sec), 60)
@@ -31,14 +34,18 @@ def build_message(d, end):
     dislikes = d["orderRatingCounter"]["dislikeCount"]
     std = d["productWithinStandardPercentageCounter"]["withinStandardPercentage"]
 
+    std_icon = "🟢" if std >= STD_GREEN else "🟡" if std >= STD_YELLOW else "🔴"
+    dis_icon = "👎" if dislikes == 0 else "🔴"
+
     return (
-        f"Отчёт за {start:%H:%M}-{end:%H:%M}\n"
+        f"☕ <b>Отчёт за {start:%H:%M}–{end:%H:%M}</b>\n"
+        f"<i>{d['unitName']} · {d['unitAlias']}</i>\n"
         f"\n"
-        f"Количество заказов за час - {hour['readyOrderCount']}\n"
-        f"Лайки - {likes}\n"
-        f"Дизлайки - {dislikes}\n"
-        f"Среднее время - {mmss(hour['readySecondsAvg'])}\n"
-        f"Соблюдение нормативов - {std}%"
+        f"📦 Заказов за час: <b>{hour['readyOrderCount']}</b>\n"
+        f"👍 Лайки: <b>{likes}</b>\n"
+        f"{dis_icon} Дизлайки: <b>{dislikes}</b>\n"
+        f"⏱ Среднее время: <b>{mmss(hour['readySecondsAvg'])}</b>\n"
+        f"{std_icon} Нормативы: <b>{std}%</b>"
     )
 
 
@@ -58,7 +65,11 @@ def main():
 
     resp = requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": build_message(data, end)},
+        data={
+            "chat_id": CHAT_ID,
+            "text": build_message(data, end),
+            "parse_mode": "HTML",
+        },
         timeout=20,
     )
     resp.raise_for_status()
