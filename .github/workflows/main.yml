@@ -1,8 +1,10 @@
+
 name: Drinkit Hourly Report
 
 on:
   schedule:
     - cron: '0 * * * *'
+
   workflow_dispatch:
     inputs:
       force:
@@ -14,6 +16,7 @@ on:
 jobs:
   report:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,5 +33,6 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_THREAD_ID: ${{ secrets.TG_THREAD_ID }}
           FORCE: ${{ inputs.force && '1' || '0' }}
         run: python bot.py
