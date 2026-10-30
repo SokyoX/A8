@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-# API мотивашки Drinkit
+# API Drinkit
 URL = "https://motivationboard.drinkit.dodois.io/api/v1/boards"
 
 PARAMS = {
@@ -13,17 +13,20 @@ PARAMS = {
     "locale": "ru",
 }
 
-# Telegram
+# Telegram settings
 TOKEN = os.environ["TG_TOKEN"]
 CHAT_ID = os.environ["TG_CHAT_ID"]
+THREAD_ID = os.environ["TG_THREAD_ID"]
 
-# Необязательный ID темы Telegram
-THREAD_ID = os.environ.get("TG_THREAD_ID")
+if not THREAD_ID.isdigit():
+    raise ValueError("TG_THREAD_ID должен содержать числовой ID темы")
 
-# Время Алматы (UTC+5)
+THREAD_ID = int(THREAD_ID)
+
+# Алматы UTC+5
 TZ = timezone(timedelta(hours=5))
 
-# Отчёты с 09:00 до 23:00 включительно
+# Время отправки
 FIRST_REPORT_HOUR = 9
 LAST_REPORT_HOUR = 23
 
@@ -32,8 +35,8 @@ STD_GREEN = 90
 STD_YELLOW = 80
 
 
-def mmss(sec):
-    minutes, seconds = divmod(int(sec), 60)
+def mmss(seconds):
+    minutes, seconds = divmod(int(seconds), 60)
     return f"{minutes}:{seconds:02d}"
 
 
@@ -43,22 +46,23 @@ def build_message(data, end):
     hour = data["lastHourCounter"]
     likes = data["orderRatingCounter"]["likeCount"]
     dislikes = data["orderRatingCounter"]["dislikeCount"]
+
     std = data["productWithinStandardPercentageCounter"][
         "withinStandardPercentage"
     ]
 
-    std_icon = (
-        "🟢" if std >= STD_GREEN
-        else "🟡" if std >= STD_YELLOW
-        else "🔴"
-    )
+    if std >= STD_GREEN:
+        std_icon = "🟢"
+    elif std >= STD_YELLOW:
+        std_icon = "🟡"
+    else:
+        std_icon = "🔴"
 
     dis_icon = "👎" if dislikes == 0 else "🔴"
 
     return (
         f"☕ <b>Отчёт за {start:%H:%M}–{end:%H:%M}</b>\n"
-        f"<i>{data['unitName']} · {data['unitAlias']}</i>\n"
-        f"\n"
+        f"<i>{data['unitName']} · {data['unitAlias']}</i>\n\n"
         f"📦 Заказов за час: <b>{hour['readyOrderCount']}</b>\n"
         f"👍 Лайки: <b>{likes}</b>\n"
         f"{dis_icon} Дизлайки: <b>{dislikes}</b>\n"
@@ -71,12 +75,12 @@ def main():
     now = datetime.now(TZ)
     end = now.replace(minute=0, second=0, microsecond=0)
 
-    # Проверяем рабочее время
+    # Проверка рабочего времени
     if (
         not FIRST_REPORT_HOUR <= end.hour <= LAST_REPORT_HOUR
         and os.environ.get("FORCE") != "1"
     ):
-        print("Вне рабочих часов, пропускаю")
+        print("Вне рабочих часов. Отправка пропущена.")
         return
 
     # Получаем данные мотивашки
@@ -96,21 +100,18 @@ def main():
             raise ValueError("API вернул пустой список")
         data = data[0]
 
-    # Формируем отчёт
+    # Создаём сообщение
     message = build_message(data, end)
 
-    # Подготавливаем отправку в Telegram
+    # Отправляем строго в указанную тему
     payload = {
         "chat_id": CHAT_ID,
+        "message_thread_id": THREAD_ID,
         "text": message,
         "parse_mode": "HTML",
     }
 
-    # Если указан ID темы — отправляем в неё
-    if THREAD_ID:
-        payload["message_thread_id"] = int(THREAD_ID)
-
-    print("Отправляю отчёт в Telegram...")
+    print(f"Отправляю отчёт в тему {THREAD_ID}...")
 
     resp = requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
@@ -123,7 +124,7 @@ def main():
 
     resp.raise_for_status()
 
-    print("Отчёт успешно отправлен!")
+    print("Отчёт успешно отправлен в нужную тему!")
 
 
 if __name__ == "__main__":
