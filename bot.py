@@ -27,12 +27,12 @@ THREAD_ID = int(THREAD_ID)
 TZ = timezone(timedelta(hours=5))
 
 # Время отправки
-FIRST_REPORT_HOUR = 9
+FIRST_REPORT_HOUR = 10
 LAST_REPORT_HOUR = 23
 
 # Пороги нормативов
 STD_GREEN = 90
-STD_YELLOW = 80
+STD_YELLOW = 70
 
 
 def mmss(seconds):
