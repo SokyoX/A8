@@ -32,7 +32,7 @@ LAST_REPORT_HOUR = 23
 
 # Пороги нормативов
 STD_GREEN = 90
-STD_YELLOW = 70
+STD_YELLOW = 80
 
 
 def mmss(seconds):
