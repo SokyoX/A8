@@ -72,7 +72,9 @@ def main():
         },
         timeout=20,
     )
-    resp.raise_for_status()
+   print("Telegram status:", resp.status_code)
+print("Telegram response:", resp.text)
+resp.raise_for_status()
 
 
 if __name__ == "__main__":
